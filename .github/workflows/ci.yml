@@ -26,7 +26,7 @@ jobs:
         run: |
           set -e
           # 1. fullconenat 内核模块 + iptables 扩展(ImmortalWrt 21.02)
-          mkdir -p package/network/utils/fullconenat/patches package/network/config/firewall/patches
+          mkdir -p package/network/utils/fullconenat/patches package/network/utils/fullconenat/files package/network/config/firewall/patches
           IW=https://raw.githubusercontent.com/immortalwrt/immortalwrt/openwrt-21.02
           curl -fL "$IW/package/network/utils/fullconenat/Makefile" -o package/network/utils/fullconenat/Makefile
           curl -fL "$IW/package/network/utils/fullconenat/files/Makefile" -o package/network/utils/fullconenat/files/Makefile
