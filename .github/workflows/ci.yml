@@ -23,6 +23,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Port fullcone + OAF packages
+        run: |
+          set -e
+          # 1. fullconenat 内核模块 + iptables 扩展(ImmortalWrt 21.02)
+          mkdir -p package/network/utils/fullconenat/patches package/network/config/firewall/patches
+          IW=https://raw.githubusercontent.com/immortalwrt/immortalwrt/openwrt-21.02
+          curl -fL "$IW/package/network/utils/fullconenat/Makefile" -o package/network/utils/fullconenat/Makefile
+          curl -fL "$IW/package/network/utils/fullconenat/files/Makefile" -o package/network/utils/fullconenat/files/Makefile
+          curl -fL "$IW/package/network/utils/fullconenat/patches/000-printk.patch" -o package/network/utils/fullconenat/patches/000-printk.patch
+          curl -fL "$IW/package/network/config/firewall/patches/100-fullconenat.patch" -o package/network/config/firewall/patches/100-fullconenat.patch
+          # 2. OpenAppFilter(destan19,固定版本)
+          curl -fL https://codeload.github.com/destan19/OpenAppFilter/tar.gz/7fcf9e87dc75f7c28c74e09504a4efa0a2db3c92 -o /tmp/oaf.tar.gz
+          mkdir -p /tmp/oaf-src
+          tar -xzf /tmp/oaf.tar.gz -C /tmp/oaf-src --strip-components=1
+          cp -r /tmp/oaf-src/oaf package/
+          cp -r /tmp/oaf-src/open-app-filter package/
+          cp -r /tmp/oaf-src/luci-app-oaf package/
+          echo "== 移植完成 =="
+          find package/network/utils/fullconenat package/network/config/firewall/patches package/oaf package/open-app-filter package/luci-app-oaf -maxdepth 1 -type f
+
       - name: Hook the openwrt_core URL for opkg
         run: |
           OWNER="${GITHUB_REPOSITORY%%/*}"
@@ -59,6 +79,21 @@ jobs:
             CONFIG_PACKAGE_kmod-bonding=y
             CONFIG_PACKAGE_kmod-qca-nss-ecm-standard=y
             CONFIG_PACKAGE_kmod-qca-nss-drv-pppoe=y
+
+            # 全锥 NAT
+            CONFIG_PACKAGE_kmod-ipt-fullconenat=y
+            CONFIG_PACKAGE_iptables-mod-fullconenat=y
+
+            # OpenAppFilter 上网行为管理
+            CONFIG_PACKAGE_luci-app-oaf=y
+
+            # frp 内网穿透
+            CONFIG_PACKAGE_frpc=y
+            CONFIG_PACKAGE_luci-app-frpc=y
+
+            # 中文界面
+            CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+            CONFIG_PACKAGE_luci-i18n-firewall-zh-cn=y
 
             CONFIG_PACKAGE_luci=y
           EOF
@@ -185,10 +220,10 @@ jobs:
             Release version: ${TAG}
 
             ## Sources
-            $(cat bin/targets/ipq50xx/arm/feeds.buildinfo | awk -F'[ ^]' '{printf "%s: `%s`\n", $2, $4}')
+            $(cat bin/targets/ipq50xx/arm/feeds.buildinfo | awk -F'[ ^]' '{printf "%s: \`%s\`\n", $2, $4}')
 
             ## SHA256
-            $(cat bin/targets/ipq50xx/arm/sha256sums | awk '{printf "%s: `%s`\n", $2, $1}' | sed -E 's/^\*//')
+            $(cat bin/targets/ipq50xx/arm/sha256sums | awk '{printf "%s: \`%s\`\n", $2, $1}' | sed -E 's/^\*//')
           EOF
 
           echo "NAME=$(head --line=1 Release.md)" >>$GITHUB_ENV
